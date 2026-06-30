@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Ransomware Hunter Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #050a0f;
+            --accent-green: #00ff9d;
+            --threat-red: #ff3c3c;
+            --ui-blue: #00d2ff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--accent-green);
+            font-family: 'Share Tech Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 60px;
+            background: rgba(0, 20, 30, 0.9);
+            border-bottom: 1px solid var(--ui-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 25px;
+            text-transform: uppercase;
+        }
+
+        .sys-info { font-size: 0.9rem; color: var(--ui-blue); }
+
+        main {
+            display: flex;
+            flex-grow: 1;
+            padding: 15px;
+            gap: 5px;
+            height: calc(100vh - 140px);
+        }
+
+        .panel {
+            background: rgba(10, 15, 20, 0.85);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .resizer {
+            width: 8px;
+            cursor: col-resize;
+            background: rgba(0, 210, 255, 0.1);
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .resizer:hover, .resizer.resizing {
+            background: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        /* Adjusted default widths for better folder scanning visibility */
+        #left-panel { width: 25%; min-width: 200px; }
+        #center-panel { flex-grow: 1; min-width: 350px; position: relative; }
+        #right-panel { width: 35%; min-width: 300px; }
+
+        .panel-header {
+            background: rgba(0, 210, 255, 0.1);
+            padding: 8px 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #hunt-feed { flex-grow: 1; padding: 10px; overflow-y: auto; font-size: 0.85rem; }
+        .feed-item { margin-bottom: 5px; opacity: 0.8; }
+
+        .scanner-visual { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .circle-radar { width: 200px; height: 200px; border: 2px solid var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
+
+        #threat-modal {
+            display: none; background: rgba(30, 0, 0, 0.95); border: 2px solid var(--threat-red);
+            padding: 20px; width: 80%; max-width: 500px; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 200; box-shadow: 0 0 30px var(--threat-red); text-align: center;
+        }
+        .modal-btns { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+
+        /* Pro Input Fields for Folder Scan */
+        .input-path {
+            width: 100%; padding: 10px; background: #000; border: 1px solid var(--ui-blue);
+            color: var(--accent-green); font-family: monospace; margin-bottom: 10px;
+        }
+
+        .btn { padding: 10px 20px; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; cursor: pointer; border: 1px solid transparent; text-transform: uppercase; }
+        .btn-kill { background: var(--threat-red); color: #fff; }
+        .btn-ignore { background: #444; color: #fff; }
+        .btn-start { background: transparent; border-color: var(--accent-green); color: var(--accent-green); }
+        .btn-start:hover { background: var(--accent-green); color: #000; }
+        .btn-stop { background: transparent; border-color: var(--threat-red); color: var(--threat-red); }
+        .btn-stop:hover { background: var(--threat-red); color: #fff; }
+        .btn-scan { background: var(--ui-blue); color: #000; font-weight: bold; width: 100%; }
+
+        #folder-results { flex-grow: 1; padding: 10px; overflow-y: auto; font-size: 0.85rem; color: #ff9d00; }
+
+        footer { height: 80px; background: rgba(0, 10, 15, 0.95); border-top: 1px solid var(--ui-blue); display: flex; justify-content: center; align-items: center; gap: 40px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="sys-info">OPERATOR: SYS_HUNTER_03 | PRO_MODE_ACTIVE</div>
+    <div style="font-family: 'Orbitron'; letter-spacing: 4px;">THREAT_HUNT_v4.5</div>
+    <div class="sys-info" id="real-time">00:00:00</div>
+</header>
+
+<main>
+    <section class="panel" id="left-panel">
+        <div class="panel-header"><span>RAM_PROCESS_STREAM</span></div>
+        <div id="hunt-feed"><div class="feed-item">> Core system standby...</div></div>
+    </section>
+
+    <div class="resizer" id="resizer-left"></div>
+
+    <section class="panel" id="center-panel">
+        <div class="panel-header">AI_VISUAL_RADAR</div>
+        <div class="scanner-visual">
+            <div id="threat-modal">
+                <h2 style="color: var(--threat-red); margin-bottom: 10px;">RAM THREAT DETECTED</h2>
+                <p id="threat-info" style="font-size: 0.9rem;">Suspicious threads found</p>
+                <div class="modal-btns">
+                    <button class="btn btn-kill" onclick="resolveThreat('kill')">KILL_PID</button>
+                    <button class="btn btn-ignore" onclick="resolveThreat('ignore')">IGNORE_LOG</button>
+                </div>
+            </div>
+            <div class="circle-radar"></div>
+            <div style="margin-top: 20px;" id="hud-status">STATUS: STANDBY</div>
+        </div>
+    </section>
+
+    <div class="resizer" id="resizer-right"></div>
+
+    <section class="panel" id="right-panel">
+        <div class="panel-header">STATIC_DIRECTORY_HUNTER</div>
+        <div style="padding: 15px; display: flex; flex-direction: column; height: 100%;">
+            <input type="text" id="folder-path-input" class="input-path" placeholder="Enter file/folder absolute path here...">
+            <button class="btn btn-scan" onclick="scanCustomFolder()">RUN HEURISTIC SCAN</button>
+            <div style="margin-top: 15px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px;">SCAN FINDINGS:</div>
+            <div id="folder-results">No active custom scan performed yet.</div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="sys-info" id="active-path">TARGET: NULL</div>
+    <div style="display: flex; gap: 20px;">
+        <button class="btn btn-start" onclick="toggleEngine('start')">START_RAM_HUNT</button>
+        <button class="btn btn-stop" onclick="toggleEngine('stop')">TERMINATE_CORE</button>
+    </div>
+</footer>
+
+<script>
+    // --- DRAG TO RESIZE LOGIC ---
+    function makeResizable(resizerId, panelId) {
+        const resizer = document.getElementById(resizerId);
+        const panel = document.getElementById(panelId);
+        let x = 0; let w = 0;
+        const mouseDownHandler = function(e) {
+            x = e.clientX; w = panel.getBoundingClientRect().width;
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        };
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - x;
+            panel.style.width = `${w + dx}px`; panel.style.flexGrow = "0";
+        };
+        const mouseUpHandler = function() {
+            resizer.classList.remove('resizing');
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+        };
+        resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+    makeResizable('resizer-left', 'left-panel');
+    makeResizable('resizer-right', 'center-panel');
+
+    setInterval(() => { document.getElementById('real-time').textContent = new Date().toLocaleTimeString(); }, 1000);
+
+    let logInterval;
+    function toggleEngine(action) {
+        fetch('/' + action, { method: 'POST' }).then(res => res.json()).then(data => {
+            const hud = document.getElementById('hud-status');
+            if (data.status === 'running') {
+                hud.textContent = "STATUS: MONITORING_RAM"; hud.style.color = "#00ff9d";
+                logInterval = setInterval(refreshData, 800);
+            } else {
+                hud.textContent = "STATUS: STANDBY"; hud.style.color = "#fff";
+                clearInterval(logInterval);
+                document.getElementById('threat-modal').style.display = 'none';
+            }
+        });
+    }
+
+    function refreshData() {
+        fetch('/get_logs').then(res => res.json()).then(data => {
+            if(data.logs.length > 0) {
+                const log = data.logs[0];
+                document.getElementById('active-path').textContent = "TARGET: " + log.substring(0, 40);
+                const div = document.createElement('div');
+                div.className = "feed-item"; div.textContent = log;
+                document.getElementById('hunt-feed').prepend(div);
+                if(log.includes("ALERT")) {
+                    document.getElementById('threat-info').textContent = log;
+                    document.getElementById('threat-modal').style.display = 'block';
+                }
+            }
+        });
+    }
+
+    function resolveThreat(action) {
+        fetch('/resolve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: action}) })
+        .then(() => { document.getElementById('threat-modal').style.display = 'none'; });
+    }
+
+    // --- PRO CUSTOM SCAN TRIGGER ---
+    function scanCustomFolder() {
+        const pathValue = document.getElementById('folder-path-input').value;
+        const resultsBox = document.getElementById('folder-results');
+        if(!pathValue) { alert("Please enter a valid path!"); return; }
+        
+        resultsBox.innerHTML = "Scanning target directory heuristics...";
+        resultsBox.style.color = "#00d2ff";
+
+        fetch('/scan_custom_folder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path: pathValue})
+        })
+        .then(res => res.json())
+        .then(data => {
+            resultsBox.innerHTML = "";
+            if(data.status === 'error') {
+                resultsBox.innerHTML = "Error: " + data.message;
+                resultsBox.style.color = "red";
+                return;
+            }
+            if(data.results.length === 0) {
+                resultsBox.innerHTML = "🟢 SCAN COMPLETE: No Ransomware signatures or suspicious high-entropy files found in this directory.";
+                resultsBox.style.color = "var(--accent-green)";
+            } else {
+                resultsBox.style.color = "var(--threat-red)";
+                data.results.forEach(res => {
+                    const item = document.createElement('div');
+                    item.style.marginBottom = "10px";
+                    item.innerHTML = `⚠️ <b>FILE:</b> ${res.file}<br><span style='color:#fff'>-> REASON: ${res.reason}</span>`;
+                    resultsBox.appendChild(item);
+                });
+            }
+        });
+    }
+</script>
+</body>
+</html>

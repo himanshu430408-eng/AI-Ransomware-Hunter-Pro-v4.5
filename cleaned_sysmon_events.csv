@@ -1,0 +1,8 @@
+EventID,ProcessName,Action,TargetFilename,IsMalicious,Action_Code
+1,explorer.exe,FileRead,document.docx,0,1
+11,chrome.exe,FileCreate,download.pdf,0,0
+11,unknown.exe,FileRename,document.docx.locked,1,2
+1,word.exe,FileRead,report.xlsx,0,1
+11,crypto.exe,FileRename,report.xlsx.locked,1,2
+1,notepad.exe,FileCreate,notes.txt,0,0
+11,malware.exe,FileRename,notes.txt.locked,1,2
